@@ -5,13 +5,6 @@
 
 using Catfood.Shapefile.Shapes;
 using DbfDataReader;
-using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Data.OleDb;
-using System.Drawing;
-using System.IO;
-using System.Text;
 
 namespace Catfood.Shapefile
 {
@@ -29,43 +22,17 @@ namespace Catfood.Shapefile
         private const string DbasePathExtension = "dbf";
 
         private bool _disposed;
-        private bool _opened;
-        private string _shapefileMainPath;
-        private string _shapefileIndexPath;
-        private string _shapefileDbasePath;
-        private FileStream _mainStream;
-        private FileStream _indexStream;
-        private Header _mainHeader;
-        private Header _indexHeader;
-        private DbfTable _dbfTable;
+        private readonly string _shapefileMainPath;
+        private readonly string _shapefileIndexPath;
+        private readonly string _shapefileDbasePath;
+        private readonly FileStream _mainStream;
+        private readonly FileStream _indexStream;
+        private readonly Header _mainHeader;
+        private readonly Header _indexHeader;
+        private readonly DbfTable _dbfTable;
 
         public Shapefile(string path)
         {
-            if (path != null)
-            {
-                Open(path);
-            }
-        }
-
-        /// <summary>
-        /// Create a new Shapefile object and open a Shapefile. Note that three files are required - 
-        /// the main file (.shp), the index file (.shx) and the dBASE table (.dbf). The three files 
-        /// must all have the same filename (i.e. shapes.shp, shapes.shx and shapes.dbf). Set path
-        /// to any one of these three files to open the Shapefile.
-        /// </summary>
-        /// <param name="path">Path to the .shp, .shx or .dbf file for this Shapefile</param>
-        /// <exception cref="ObjectDisposedException">Thrown if the Shapefile has been disposed</exception>
-        /// <exception cref="ArgumentNullException">Thrown if the path parameter is null</exception>
-        /// <exception cref="ArgumentException">Thrown if the path parameter is empty</exception>
-        /// <exception cref="FileNotFoundException">Thrown if one of the three required files is not found</exception>
-        /// <exception cref="InvalidOperationException">Thrown if an error occurs parsing file headers</exception>
-        public void Open(string path)
-        {
-            if (_disposed)
-            {
-                throw new ObjectDisposedException("Shapefile");
-            }
-
             if (path == null)
             {
                 throw new ArgumentNullException("path");
@@ -121,9 +88,7 @@ namespace Catfood.Shapefile
             Count = (_indexHeader.FileLength - (Header.HeaderLength / 2)) / 4;
 
             // open the metadata database
-            OpenDb();
-
-            _opened = true;
+            _dbfTable = new DbfTable(_shapefileDbasePath);
         }
 
         /// <summary>
@@ -149,22 +114,12 @@ namespace Catfood.Shapefile
         /// </summary>
         public ShapeType Type { get; private set; }
 
-        private void OpenDb()
-        {
-            _dbfTable = new DbfTable(_shapefileDbasePath);
-        }
-
-        private void CloseDb()
-        {
-            _dbfTable.Close();
-        }
-
         #region IDisposable Members
 
         /// <summary />
         ~Shapefile()
         {
-            Dispose(false);
+            Dispose();
         }
 
         /// <summary>
@@ -172,33 +127,14 @@ namespace Catfood.Shapefile
         /// </summary>
         public void Dispose()
         {
-            Dispose(true);
             GC.SuppressFinalize(this);
-        }
-
-        private void Dispose(bool canDisposeManagedResources)
-        {
             if (!_disposed)
             {
-                if (canDisposeManagedResources)
-                {
-                    if (_mainStream != null)
-                    {
-                        _mainStream.Close();
-                        _mainStream = null;
-                    }
-
-                    if (_indexStream != null)
-                    {
-                        _indexStream.Close();
-                        _indexStream = null;
-                    }
-
-                    CloseDb();
-                }
+                _mainStream?.Close();
+                _indexStream?.Close();
+                _dbfTable?.Dispose();
 
                 _disposed = true;
-                _opened = false;
             }
         }
 

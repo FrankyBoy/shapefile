@@ -62,16 +62,7 @@ namespace Catfood.Shapefile
 
         #region IEnumerator Members
 
-        /// <summary>
-        /// Gets the current item in the collection
-        /// </summary>
-        object System.Collections.IEnumerator.Current
-        {
-            get
-            {
-                return Current;
-            }
-        }
+        object System.Collections.IEnumerator.Current => Current;
 
         public void Dispose()
         {
