@@ -3,6 +3,7 @@
  * Provided under the ms-PL license, see LICENSE.txt
  * ------------------------------------------------------------------------ */
 
+using Catfood.Shapefile.Shapes;
 using DbfDataReader;
 using System;
 using System.Collections.Generic;
@@ -113,7 +114,7 @@ namespace Catfood.Shapefile
 
             // set properties from the main header
             Type = _mainHeader.ShapeType;
-            BoundingBox = new RectangleD(_mainHeader.XMin, _mainHeader.YMin, _mainHeader.XMax, _mainHeader.YMax);
+            BoundingBox = new Rectangle(_mainHeader.XMin, _mainHeader.YMin, _mainHeader.XMax, _mainHeader.YMax);
 
             // index header length is in 16-bit words, including the header - number of 
             // shapes is the number of records (each 4 workds long) after subtracting the header bytes
@@ -141,7 +142,7 @@ namespace Catfood.Shapefile
         /// <summary>
         /// Gets the bounding box for the Shapefile
         /// </summary>
-        public RectangleD BoundingBox { get; private set; }
+        public Rectangle BoundingBox { get; private set; }
 
         /// <summary>
         /// Gets the ShapeType of the Shapefile

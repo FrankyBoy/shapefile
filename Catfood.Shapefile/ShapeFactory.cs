@@ -3,11 +3,7 @@
  * Provided under the ms-PL license, see LICENSE.txt
  * ------------------------------------------------------------------------ */
 
-using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Data;
-using System.Text;
+using Catfood.Shapefile.Shapes;
 
 namespace Catfood.Shapefile
 {
@@ -48,8 +44,8 @@ namespace Catfood.Shapefile
             //Position  Field       Value                   Type        Number      Order
             //Byte 0    Shape Type  Shape Type              Integer     1           Little
 
-            int contentLengthInWords = EndianBitConverter.ToInt32(shapeData, 4, ProvidedOrder.Big);
-            ShapeType shapeType = (ShapeType)EndianBitConverter.ToInt32(shapeData, 8, ProvidedOrder.Little);
+            int contentLengthInWords = EndianBitConverter.ToInt32(shapeData, 4, ByteOrder.Big);
+            ShapeType shapeType = (ShapeType)EndianBitConverter.ToInt32(shapeData, 8, ByteOrder.Little);
 
             // test that we have the expected amount of data - need to take the 8 byte header into account
             if (shapeData.Length != (contentLengthInWords * 2) + 8)

@@ -3,6 +3,7 @@
  * Provided under the ms-PL license, see LICENSE.txt
  * ------------------------------------------------------------------------ */
 
+using Catfood.Shapefile.Shapes;
 using DbfDataReader;
 
 namespace Catfood.Shapefile
@@ -44,11 +45,11 @@ namespace Catfood.Shapefile
                 byte[] indexHeaderBytes = new byte[8];
                 _indexStream.Seek(Header.HeaderLength + _currentIndex * 8, SeekOrigin.Begin);
                 _indexStream.Read(indexHeaderBytes, 0, indexHeaderBytes.Length);
-                int contentOffsetInWords = EndianBitConverter.ToInt32(indexHeaderBytes, 0, ProvidedOrder.Big);
-                int contentLengthInWords = EndianBitConverter.ToInt32(indexHeaderBytes, 4, ProvidedOrder.Big);
+                int contentOffsetInWords = EndianBitConverter.ToInt32(indexHeaderBytes, 0, ByteOrder.Big);
+                int contentLengthInWords = EndianBitConverter.ToInt32(indexHeaderBytes, 4, ByteOrder.Big);
 
                 // get the data chunk from the main file - need to factor in 8 byte record header
-                int bytesToRead = (contentLengthInWords * 2) + 8;
+                int bytesToRead = contentLengthInWords * 2 + 8;
                 byte[] shapeData = new byte[bytesToRead];
                 _mainStream.Seek(contentOffsetInWords * 2, SeekOrigin.Begin);
                 _mainStream.Read(shapeData, 0, bytesToRead);

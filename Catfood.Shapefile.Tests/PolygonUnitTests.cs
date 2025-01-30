@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using Catfood.Shapefile.Shapes;
+using System.Reflection;
 
 namespace Catfood.Shapefile.UnitTests
 {
