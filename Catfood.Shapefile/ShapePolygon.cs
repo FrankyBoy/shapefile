@@ -6,8 +6,8 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Text;
 using System.Data;
+using System.Text;
 
 namespace Catfood.Shapefile
 {
@@ -28,8 +28,8 @@ namespace Catfood.Shapefile
         /// <param name="shapeData">The shape record as a byte array</param>
         /// <exception cref="ArgumentNullException">Thrown if shapeData is null</exception>
         /// <exception cref="InvalidOperationException">Thrown if an error occurs parsing shapeData</exception>
-        protected internal ShapePolygon(int recordNumber, StringDictionary metadata, IDataRecord dataRecord, byte[] shapeData)
-            : base(ShapeType.Polygon, recordNumber, metadata, dataRecord)
+        protected internal ShapePolygon(Dictionary<string, string> metadata, byte[] shapeData)
+            : base(ShapeType.Polygon, metadata, shapeData)
         {
             ParsePolyLineOrPolygon(shapeData, out _boundingBox, out _parts);
         }
@@ -41,7 +41,7 @@ namespace Catfood.Shapefile
         {
             get { return _boundingBox; }
         }
-        
+
         /// <summary>
         /// Gets a list of parts (segments) for the PolyLine. Each part
         /// is an array of double precision points

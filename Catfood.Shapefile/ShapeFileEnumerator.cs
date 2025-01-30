@@ -3,35 +3,25 @@
  * Provided under the ms-PL license, see LICENSE.txt
  * ------------------------------------------------------------------------ */
 
-using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Data.OleDb;
-using System.IO;
-using System.Text;
+using DbfDataReader;
 
 namespace Catfood.Shapefile
 {
     class ShapeFileEnumerator : IEnumerator<Shape>
     {
-        private OleDbCommand _dbCommand;
-        private OleDbDataReader _dbReader;
+        private readonly FileStream _mainStream;
         private int _currentIndex = -1;
-        private bool _rawMetadataOnly;
-        private FileStream _mainStream;
-        private FileStream _indexStream;
-        private int _count;
+        private readonly FileStream _indexStream;
+        private readonly DbfTable _dbfTable;
+        private DbfRecord _dbfRecord;
 
-        public ShapeFileEnumerator(OleDbConnection dbConnection, string selectString, bool rawMetadataOnly, FileStream mainStream,
-                                   FileStream indexStream, int count)
+        public ShapeFileEnumerator(DbfTable dbfTable, FileStream mainStream,
+                                   FileStream indexStream)
         {
-
-            _rawMetadataOnly = rawMetadataOnly;
             _mainStream = mainStream;
             _indexStream = indexStream;
-            _count = count;
-            _dbCommand = new OleDbCommand(selectString, dbConnection);
-            _dbReader = _dbCommand.ExecuteReader();
+            _dbfTable = dbfTable;
+            _dbfRecord = new DbfRecord(_dbfTable);
         }
 
 
@@ -45,16 +35,10 @@ namespace Catfood.Shapefile
             get
             {
                 // get the metadata
-                StringDictionary metadata = null;
-                if (!_rawMetadataOnly)
-                {
-                    metadata = new StringDictionary();
-                    for (int i = 0; i < _dbReader.FieldCount; i++)
-                    {
-                        metadata.Add(_dbReader.GetName(i),
-                            _dbReader.GetValue(i).ToString());
-                    }
-                }
+                Dictionary<string, string> metadata = new Dictionary<string, string>();
+                metadata = _dbfTable.Columns.ToDictionary(
+                    x => x.ColumnName.ToLowerInvariant(),
+                    x => _dbfRecord.GetStringValue(x.ColumnOrdinal ?? 0));
 
                 // get the index record
                 byte[] indexHeaderBytes = new byte[8];
@@ -69,7 +53,7 @@ namespace Catfood.Shapefile
                 _mainStream.Seek(contentOffsetInWords * 2, SeekOrigin.Begin);
                 _mainStream.Read(shapeData, 0, bytesToRead);
 
-                return ShapeFactory.ParseShape(shapeData, metadata, _dbReader);
+                return ShapeFactory.ParseShape(shapeData, metadata);
             }
         }
 
@@ -84,14 +68,13 @@ namespace Catfood.Shapefile
         {
             get
             {
-                return this.Current;
+                return Current;
             }
         }
 
         public void Dispose()
         {
-            _dbReader.Close();
-            _dbCommand.Dispose();
+            _dbfTable.Dispose();
         }
 
         /// <summary>
@@ -100,32 +83,12 @@ namespace Catfood.Shapefile
         /// <returns>false if there are no more items in the collection</returns>
         public bool MoveNext()
         {
-
-            if (_currentIndex++ < (_count - 1))
-            {
-                // try to read the next database record
-                if (!_dbReader.Read())
-                {
-                    throw new InvalidOperationException("Metadata database does not contain a record for the next shape");
-                }
-
-                return true;
-            }
-            else
-            {
-                // reached the last shape
-                return false;
-            }
+            _currentIndex++;
+            return _dbfTable.Read(_dbfRecord);
         }
 
-        /// <summary>
-        /// Reset the enumerator
-        /// </summary>
         public void Reset()
         {
-            _dbReader.Close();
-            _dbReader = _dbCommand.ExecuteReader();
-            _currentIndex = -1;
         }
 
         #endregion

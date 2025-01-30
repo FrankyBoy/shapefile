@@ -6,8 +6,8 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Text;
 using System.Data;
+using System.Text;
 
 namespace Catfood.Shapefile
 {
@@ -18,10 +18,9 @@ namespace Catfood.Shapefile
     /// </summary>
     public class Shape
     {
-        internal ShapeType _type;
-        private int _recordNumber;
-        private StringDictionary _metadata;
-        private IDataRecord _dataRecord;
+        private Dictionary<string, string> _metadata;
+
+        public int RecordNumber { get; }
 
         /// <summary>
         /// Base Shapefile shape - contains only the shape type and metadata plus helper methods.
@@ -32,12 +31,11 @@ namespace Catfood.Shapefile
         /// <param name="recordNumber">The record number in the Shapefile</param>
         /// <param name="metadata">Metadata about the shape (optional)</param>
         /// <param name="dataRecord">IDataRecord associated with the shape</param>
-        protected internal Shape(ShapeType shapeType, int recordNumber, StringDictionary metadata, IDataRecord dataRecord)
+        protected internal Shape(ShapeType shapeType, Dictionary<string, string> metadata, byte[] shapeData)
         {
-            _type = shapeType;
             _metadata = metadata;
-            _recordNumber = recordNumber;
-            _dataRecord = dataRecord;
+            Type = shapeType;
+            RecordNumber = EndianBitConverter.ToInt32(shapeData, 0, ProvidedOrder.Big);
         }
 
         /// <summary>
@@ -81,28 +79,9 @@ namespace Catfood.Shapefile
         }
 
         /// <summary>
-        /// Returns the IDataRecord associated with the shape metadata
-        /// </summary>
-        public IDataRecord DataRecord
-        {
-            get { return _dataRecord; }
-        }
-
-        /// <summary>
-        /// Gets the record number associated with this shape
-        /// </summary>
-        public int RecordNumber
-        {
-            get { return _recordNumber; }
-        }
-
-        /// <summary>
         /// Get the ShapeType of this shape
         /// </summary>
-        public ShapeType Type
-        {
-            get { return _type; }
-        }
+        public ShapeType Type { get; protected set; }
 
         /// <summary>
         /// Extracts a double precision rectangle (RectangleD) from a byte array - assumes that

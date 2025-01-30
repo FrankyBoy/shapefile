@@ -3,12 +3,9 @@
  * Provided under the ms-PL license, see LICENSE.txt
  * ------------------------------------------------------------------------ */
 
-using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Text;
 
-[assembly: InternalsVisibleTo("Catfood.Shapefile.UnitTests")]
+[assembly: InternalsVisibleTo("Catfood.Shapefile.Tests")]
 namespace Catfood.Shapefile
 {
     /// <summary>
@@ -96,7 +93,7 @@ namespace Catfood.Shapefile
         /// The length of a Shapefile header in bytes
         /// </summary>
         public const int HeaderLength = 100;
-        
+
         private const int ExpectedFileCode = 9994;
         private const int ExpectedVersion = 1000;
 
@@ -128,7 +125,7 @@ namespace Catfood.Shapefile
 
             if (headerBytes.Length != HeaderLength)
             {
-                throw new InvalidOperationException(string.Format("headerBytes must be {0} bytes long", 
+                throw new InvalidOperationException(string.Format("headerBytes must be {0} bytes long",
                     HeaderLength));
             }
 
@@ -150,7 +147,7 @@ namespace Catfood.Shapefile
             //Byte 76*  Bounding Box    Zmax        Double      Little
             //Byte 84*  Bounding Box    Mmin        Double      Little
             //Byte 92*  Bounding Box    Mmax        Double      Little
-            
+
             _fileCode = EndianBitConverter.ToInt32(headerBytes, 0, ProvidedOrder.Big);
             if (_fileCode != ExpectedFileCode)
             {

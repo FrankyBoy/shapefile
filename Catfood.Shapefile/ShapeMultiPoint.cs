@@ -6,8 +6,8 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Text;
 using System.Data;
+using System.Text;
 
 namespace Catfood.Shapefile
 {
@@ -28,8 +28,8 @@ namespace Catfood.Shapefile
         /// <param name="shapeData">The shape record as a byte array</param>
         /// <exception cref="ArgumentNullException">Thrown if shapeData is null</exception>
         /// <exception cref="InvalidOperationException">Thrown if an error occurs parsing shapeData</exception>
-        protected internal ShapeMultiPoint(int recordNumber, StringDictionary metadata, IDataRecord dataRecord, byte[] shapeData)
-            : base(ShapeType.MultiPoint, recordNumber, metadata, dataRecord)
+        protected internal ShapeMultiPoint(Dictionary<string, string> metadata, byte[] shapeData)
+            : base(ShapeType.MultiPoint, metadata, shapeData)
         {
             // metadata is validated by the base class
             if (shapeData == null)
@@ -77,7 +77,7 @@ namespace Catfood.Shapefile
         {
             get { return _boundingBox; }
         }
-        
+
         /// <summary>
         /// Gets the array of points
         /// </summary>

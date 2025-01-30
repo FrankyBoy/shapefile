@@ -3,13 +3,14 @@
  * Provided under the ms-PL license, see LICENSE.txt
  * ------------------------------------------------------------------------ */
 
+using DbfDataReader;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Text;
-using System.IO;
-using System.Drawing;
 using System.Data.OleDb;
+using System.Drawing;
+using System.IO;
+using System.Text;
 
 namespace Catfood.Shapefile
 {
@@ -22,80 +23,23 @@ namespace Catfood.Shapefile
     /// </remarks>
     public class Shapefile : IDisposable, IEnumerable<Shape>
     {
-        /// <summary>
-        /// Jet connection string template
-        /// </summary>
-        public const string ConnectionStringTemplateJet = @"Provider=Microsoft.Jet.OLEDB.4.0;Data Source={0};Extended Properties=dBase IV";
-
-        /// <summary>
-        /// ACE connection string template
-        /// </summary>
-        public const string ConnectionStringTemplateAce = @"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={0};Extended Properties=dBase IV";
-        
-        private const string DbSelectStringTemplate = "SELECT * FROM [{0}]";
         private const string MainPathExtension = "shp";
         private const string IndexPathExtension = "shx";
         private const string DbasePathExtension = "dbf";
 
         private bool _disposed;
         private bool _opened;
-        private bool _rawMetadataOnly;
-        private int _count;
-        private RectangleD _boundingBox;
-        private ShapeType _type;
         private string _shapefileMainPath;
         private string _shapefileIndexPath;
         private string _shapefileDbasePath;
-        private string _shapefileTempDbasePath;
         private FileStream _mainStream;
         private FileStream _indexStream;
         private Header _mainHeader;
         private Header _indexHeader;
-        private OleDbConnection _dbConnection;
-        private string _connectionStringTemplate;
-        private string _selectString;
+        private DbfTable _dbfTable;
 
-        /// <summary>
-        /// Create a new Shapefile object.
-        /// </summary>
-        public Shapefile()
-            : this(null, ConnectionStringTemplateJet) {}
-
-        /// <summary>
-        /// Create a new Shapefile object and open a Shapefile. Note that three files are required - 
-        /// the main file (.shp), the index file (.shx) and the dBASE table (.dbf). The three files 
-        /// must all have the same filename (i.e. shapes.shp, shapes.shx and shapes.dbf). Set path
-        /// to any one of these three files to open the Shapefile.
-        /// </summary>
-        /// <param name="path">Path to the .shp, .shx or .dbf file for this Shapefile</param>
-        /// <exception cref="ObjectDisposedException">Thrown if the Shapefile has been disposed</exception>
-        /// <exception cref="ArgumentException">Thrown if the path parameter is empty</exception>
-        /// <exception cref="FileNotFoundException">Thrown if one of the three required files is not found</exception>
         public Shapefile(string path)
-            : this(path, ConnectionStringTemplateJet) {}
-
-        /// <summary>
-        /// Create a new Shapefile object and open a Shapefile. Note that three files are required - 
-        /// the main file (.shp), the index file (.shx) and the dBASE table (.dbf). The three files 
-        /// must all have the same filename (i.e. shapes.shp, shapes.shx and shapes.dbf). Set path
-        /// to any one of these three files to open the Shapefile.
-        /// </summary>
-        /// <param name="path">Path to the .shp, .shx or .dbf file for this Shapefile</param>
-        /// <param name="connectionStringTemplate">Connection string template - use Shapefile.ConnectionStringTemplateJet
-        /// (the default), Shapefile.ConnectionStringTemplateAce or your own dBASE connection string</param>
-        /// <exception cref="ObjectDisposedException">Thrown if the Shapefile has been disposed</exception>
-        /// <exception cref="ArgumentNullException">Thrown if the connectionStringTemplate parameter is null</exception>
-        /// <exception cref="ArgumentException">Thrown if the path parameter is empty</exception>
-        /// <exception cref="FileNotFoundException">Thrown if one of the three required files is not found</exception>
-        public Shapefile(string path, string connectionStringTemplate)
         {
-            if (connectionStringTemplate == null)
-            {
-                throw new ArgumentNullException("connectionStringTemplate");
-            }
-
-            ConnectionStringTemplate = connectionStringTemplate;
-
             if (path != null)
             {
                 Open(path);
@@ -168,12 +112,12 @@ namespace Catfood.Shapefile
             _indexHeader = new Header(headerBytes);
 
             // set properties from the main header
-            _type = _mainHeader.ShapeType;
-            _boundingBox = new RectangleD(_mainHeader.XMin, _mainHeader.YMin, _mainHeader.XMax, _mainHeader.YMax);
+            Type = _mainHeader.ShapeType;
+            BoundingBox = new RectangleD(_mainHeader.XMin, _mainHeader.YMin, _mainHeader.XMax, _mainHeader.YMax);
 
             // index header length is in 16-bit words, including the header - number of 
             // shapes is the number of records (each 4 workds long) after subtracting the header bytes
-            _count = (_indexHeader.FileLength - (Header.HeaderLength / 2)) / 4;
+            Count = (_indexHeader.FileLength - (Header.HeaderLength / 2)) / 4;
 
             // open the metadata database
             OpenDb();
@@ -190,125 +134,28 @@ namespace Catfood.Shapefile
         }
 
         /// <summary>
-        /// Gets or sets the connection string template - use Shapefile.ConnectionStringTemplateJet
-        /// (the default), Shapefile.ConnectionStringTemplateAce or your own dBASE connection string
-        /// </summary>
-        public string ConnectionStringTemplate
-        {
-            get { return _connectionStringTemplate; }
-            set { _connectionStringTemplate = value; }
-        }
-
-        /// <summary>
-        /// If true then only the IDataRecord (DataRecord) property is available to access metadata for each shape.
-        /// If flase (the default) then metadata is also parsed into a string dictionary (use GetMetadataNames() and
-        /// GetMetadata() to access)
-        /// </summary>
-        public bool RawMetadataOnly
-        {
-            get { return _rawMetadataOnly; }
-            set { _rawMetadataOnly = value; }
-        }
-
-        /// <summary>
         /// Gets the number of shapes in the Shapefile
         /// </summary>
-        public int Count
-        {
-            get 
-            {
-                if (_disposed) throw new ObjectDisposedException("Shapefile");
-                if (!_opened) throw new InvalidOperationException("Shapefile not open.");
-
-                return _count; 
-            }
-        }
+        public int Count { get; private set; }
 
         /// <summary>
         /// Gets the bounding box for the Shapefile
         /// </summary>
-        public RectangleD BoundingBox
-        {
-            get 
-            {
-                if (_disposed) throw new ObjectDisposedException("Shapefile");
-                if (!_opened) throw new InvalidOperationException("Shapefile not open.");
-
-                return _boundingBox; 
-            }
-           
-        }
+        public RectangleD BoundingBox { get; private set; }
 
         /// <summary>
         /// Gets the ShapeType of the Shapefile
         /// </summary>
-        public ShapeType Type
-        {
-            get 
-            {
-                if (_disposed) throw new ObjectDisposedException("Shapefile");
-                if (!_opened) throw new InvalidOperationException("Shapefile not open.");
-                
-                return _type; 
-            }
-        }
+        public ShapeType Type { get; private set; }
 
         private void OpenDb()
         {
-            // The drivers for DBF files throw an exception if the filename 
-            // is longer than 8 characters - in this case create a temp file
-            // for the DB
-            string safeDbasePath = _shapefileDbasePath;
-            if (Path.GetFileNameWithoutExtension(safeDbasePath).Length > 8)
-            {
-                // create/delete temp file (we just want a safe path)
-                string initialTempFile = Path.GetTempFileName();
-                try
-                {
-                    File.Delete(initialTempFile);
-                }
-                catch { }
-
-                // set the correct extension
-                _shapefileTempDbasePath = Path.ChangeExtension(initialTempFile, DbasePathExtension);
-
-                // copy over the DB
-                File.Copy(_shapefileDbasePath, _shapefileTempDbasePath, true);
-                safeDbasePath = _shapefileTempDbasePath;
-            }
-
-            string connectionString = string.Format(ConnectionStringTemplate,
-                Path.GetDirectoryName(safeDbasePath));
-            _selectString = string.Format(DbSelectStringTemplate,
-                Path.GetFileNameWithoutExtension(safeDbasePath));
-
-            _dbConnection = new OleDbConnection(connectionString);
-            _dbConnection.Open();
-            
+            _dbfTable = new DbfTable(_shapefileDbasePath);
         }
 
         private void CloseDb()
         {
-
-            if (_dbConnection != null)
-            {
-                _dbConnection.Close();
-                _dbConnection = null;
-            }
-
-            if (_shapefileTempDbasePath != null)
-            {
-                if (File.Exists(_shapefileTempDbasePath))
-                {
-                    try
-                    {
-                        File.Delete(_shapefileTempDbasePath);
-                    }
-                    catch { }
-                }
-
-                _shapefileTempDbasePath = null;
-            }
+            _dbfTable.Close();
         }
 
         #region IDisposable Members
@@ -361,9 +208,7 @@ namespace Catfood.Shapefile
         /// <returns>IEnumerator</returns>
         public IEnumerator<Shape> GetEnumerator()
         {
-
-            return new ShapeFileEnumerator(_dbConnection, _selectString, _rawMetadataOnly, _mainStream,
-                                          _indexStream, _count);
+            return new ShapeFileEnumerator(_dbfTable, _mainStream, _indexStream);
         }
 
         #endregion

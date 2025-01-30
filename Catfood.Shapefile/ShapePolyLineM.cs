@@ -6,8 +6,8 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Text;
 using System.Data;
+using System.Text;
 
 namespace Catfood.Shapefile
 {
@@ -25,10 +25,10 @@ namespace Catfood.Shapefile
         /// <param name="shapeData">The shape record as a byte array</param>
         /// <exception cref="ArgumentNullException">Thrown if shapeData is null</exception>
         /// <exception cref="InvalidOperationException">Thrown if an error occurs parsing shapeData</exception>
-        protected internal ShapePolyLineM(int recordNumber, StringDictionary metadata, IDataRecord dataRecord, byte[] shapeData)
-            : base(recordNumber, metadata, dataRecord)
+        protected internal ShapePolyLineM(Dictionary<string, string> metadata, byte[] shapeData)
+            : base(metadata, shapeData)
         {
-            _type = ShapeType.PolyLineM; 
+            Type = ShapeType.PolyLineM;
 
             M = new List<double>();
             ParsePolyLineM(shapeData, out _boundingBox, out _parts);
@@ -97,7 +97,7 @@ namespace Catfood.Shapefile
             // extract bounding box, number of parts and number of points
             boundingBox = ParseBoundingBox(shapeData, 12, ProvidedOrder.Little);
             int numParts = EndianBitConverter.ToInt32(shapeData, 44, ProvidedOrder.Little);
-            int numPoints = EndianBitConverter.ToInt32(shapeData, 48, ProvidedOrder.Little);            
+            int numPoints = EndianBitConverter.ToInt32(shapeData, 48, ProvidedOrder.Little);
 
             // validation step 2 - we're expecting 4 * numParts + (16 + 8 * numPoints for m extremes and values) + 16 * numPoints + 52 bytes total
             if (shapeData.Length != 52 + (4 * numParts) + 16 + 8 * numPoints + (16 * numPoints))
